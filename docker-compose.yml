@@ -1,0 +1,69 @@
+version: "3.9"
+services:
+  ahw-db:
+    image: postgres:16.0
+    environment:
+      POSTGRES_DB: "airflow"
+      POSTGRES_USER: "hwuser"
+      POSTGRES_PASSWORD: "hwpassword"
+    ports:
+      - "6543:5432"
+    volumes:
+      - ahw-db-data:/var/lib/postgresql/data
+
+  ahw-airflow-initdb:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      network: host
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://hwuser:hwpassword@ahw-db:5432/airflow
+    entrypoint: airflow db init &&
+    depends_on:                                                 
+      - ahw-db
+
+  ahw-airflow-craete-user:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      network: host
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://hwuser:hwpassword@ahw-db:5432/airflow
+    entrypoint: airflow users create -e test@mail.ru -f FIRSTNAME -l LASTNAME -p admin -r Admin -u admin
+    depends_on:
+      - ahw-airflow-initdb
+
+  ahw-airflow-webserver:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      network: host
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://hwuser:hwpassword@ahw-db:5432/airflow
+    ports:
+      - "8080:8080"
+    restart: always
+    volumes:
+      - ./dags:/usr/local/airflow/dags
+      - ./custom_lib:/usr/local/airflow/custom_lib
+    entrypoint: airflow webserver
+    depends_on:
+      - ahw-airflow-craete-user
+
+  ahw-airflow-scheduler:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      network: host
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://hwuser:hwpassword@ahw-db:5432/airflow
+    restart: always
+    volumes:
+      - ./dags:/usr/local/airflow/dags
+      - ./custom_lib:/usr/local/airflow/custom_lib
+    entrypoint: airflow scheduler
+    depends_on:
+      - ahw-airflow-webserver
+
+volumes:
+  ahw-db-data:
