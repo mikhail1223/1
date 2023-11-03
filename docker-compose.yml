@@ -6,10 +6,11 @@ services:
       POSTGRES_DB: "airflow"
       POSTGRES_USER: "hwuser"
       POSTGRES_PASSWORD: "hwpassword"
+      POSTGRES_INITDB_ARGS: '--encoding=UTF-8 --lc-collate=C --lc-ctype=C'
     ports:
       - "5432:5432"
     volumes:
-      - ahw-db-data:/var/lib/postgresql/data
+      - ./pg_data:/var/lib/postgresql/data
 
   ahw-airflow-initdb:
     build:
@@ -18,9 +19,20 @@ services:
       network: host
     environment:
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://hwuser:hwpassword@ahw-db:5432/airflow
-    entrypoint: airflow db init &&
+    entrypoint: airflow db init
     depends_on:                                                 
       - ahw-db
+
+  ahw-airflow-upddb:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      network: host
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://hwuser:hwpassword@ahw-db:5432/airflow
+    entrypoint: airflow db upgrade
+    depends_on:
+      - ahw-airflow-initdb
 
   ahw-airflow-craete-user:
     build:
@@ -31,7 +43,7 @@ services:
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://hwuser:hwpassword@ahw-db:5432/airflow
     entrypoint: airflow users create -e test@mail.ru -f FIRSTNAME -l LASTNAME -p admin -r Admin -u admin
     depends_on:
-      - ahw-airflow-initdb
+      - ahw-airflow-upddb
 
   ahw-airflow-webserver:
     build:
@@ -65,5 +77,5 @@ services:
     depends_on:
       - ahw-airflow-craete-user
 
-volumes:
-  ahw-db-data:
+#volumes:
+#  ahw-db-data:
