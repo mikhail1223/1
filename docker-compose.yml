@@ -7,7 +7,7 @@ services:
       POSTGRES_USER: "hwuser"
       POSTGRES_PASSWORD: "hwpassword"
     ports:
-      - "6543:5432"
+      - "5432:5432"
     volumes:
       - ahw-db-data:/var/lib/postgresql/data
 
@@ -63,7 +63,7 @@ services:
       - ./custom_lib:/usr/local/airflow/custom_lib
     entrypoint: airflow scheduler
     depends_on:
-      - ahw-airflow-webserver
+      - ahw-airflow-craete-user
 
 volumes:
   ahw-db-data:
